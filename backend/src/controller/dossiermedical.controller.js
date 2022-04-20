@@ -17,14 +17,11 @@ function envoyermail(prix,email){
     var mailOptions = {
       from: 'testcoding975@gmail.com',
       to: email,
-      subject: 'Voila votre prix de remboursement:',
-      text:'prix : '+  prix
+      subject: 'dossier de remboursement:',
+      text:'Voila votre prix de remboursement : '+  prix + "DH"
     };
     
     transporter.sendMail(mailOptions, function(error, info){
-        if (err) {
-            return log('Error occurs');
-        }
     });
     
 }
@@ -39,49 +36,58 @@ const index = async (req, res) => {
     }
 }
 
+  //calculer remboursement
 
+const calculer= async (code,quantite) =>
+{
+        const detailsmaladie = await detailsmaladies.find();
+        let remboursement=0;
+        detailsmaladie.forEach(Element => {
+            code.forEach(element => {
+                
+            if(Element.code==element){
+                quantite.forEach(ElemenT => {
+                remboursement +=((Element.prix*(Element.remboursement/100))*ElemenT);
+                })
+            }
+            });
+        });
+  
+      return remboursement;
+}
 // create new dossiermedical
 const store = async (req, res) => {
+   
     //get body from http req 
-    const { cnie,typemaladie, code,quantite,detailsmaladies} = req.body
-    const file=req.file.path;
+    const { cnie,code,quantite,detailsmaladies} = req.body
     
     try {
-        if (!cnie || !typemaladie || !code  || !quantite || !detailsmaladies|| !file)
+        if (!cnie  || !code  || !quantite || !detailsmaladies)
             return res.status(400).json({ message: "Please fill all the fields" }) // input validation
-
-            //calculer remboursement
-            const detailsmaladie = await detailsmaladies.find();
-            const remboursement=0;
-            detailsmaladie.forEach(element => {
-                if(element.code==code){
-                     remboursement +=(element.prix*element.remboursement)*quantite;
-                }
-            });
+          
+            let  remboursement = await calculer(code,quantite);
 
             // add dossiermedical
             const newdossiermedical = await dossiermedicals.create({
                 cnie,
-                typemaladie,
                 code,
                 quantite,
-                file,
                 detailsmaladies,
                 remboursement:remboursement
             })
 
+
+         //cherche email patien
             const patient = await patients.find();
-            const email="";
+            let email="";
             patient.forEach(element => {
                 if(element.cnie==cnie){
                      email=element.email;
                 }
             });
-
             
-            res.status(200).json({ newdossiermedical })
+             res.status(200).json({ newdossiermedical })
             envoyermail(remboursement,email)
-             res.status(200).json({ message: "dossiermedical ajouter avec successfully" })
 
         
     } catch (err) {
@@ -101,43 +107,10 @@ const deletedossiermedical = async (req, res) => {
     }
 }
 
-//Update compte dossiermedical
-// const updatedossiermedical = async (req, res) => {
-//     //get body from http req 
-//     const { cnie,typemaladie, code,quantite,detailsmaladies} = req.body
-//     const file=req.file;
-//     const id=req.params
-//     const record = { _id: id };
-//     try {
-//         if (!cnie || !typemaladie || !code  || !quantite || !detailsmaladies|| !file)
-//             return res.status(400).json({ message: "Please fill all the fields" }) // input validation
-//         // update status compte dossiermedical
-//         if(emailvalide){
-//         const updatedossiermedical = await dossiermedicals.updateOne(record, {
-//             $set: {
-//                 cnie: cnie,
-//                 typemaladie: typemaladie,
-//                 code: code,
-//                 quantite: quantite,
-//                 file: file,
-//                 detailsmaladies: detailsmaladies
-
-//             }
-//         })
-//         res.status(200).json({ updatedossiermedical })
-//         res.status(200).json({ message: "dossiermedical update avec successfully" })
-//     }else{
-//         return res.status(400).json({ message: "email invalide" })
-//     }
-//     } catch (err) {
-//         res.status(400).json({ error: err.message }) // req error
-//     }
-// }
 
 
 module.exports = {
     index,
     store,
     deletedossiermedical,
-    // updatedossiermedical
 };

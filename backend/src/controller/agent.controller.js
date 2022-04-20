@@ -8,7 +8,7 @@ const { PasswordMail } = require('../utils/mail');
 const loginagent = async (req, res) => {
     //get body from http req 
     const { email, password } = req.body
-    // console.log(req.body);
+ 
     try {
         if (!email || !password) return res.status(404).json({ message: "Please fill all the fields" }) // input validation
         const existingagent = await agents.findOne({ email }) // find user data with email
